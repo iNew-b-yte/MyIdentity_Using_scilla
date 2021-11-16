@@ -1,0 +1,72 @@
+scilla_version 0
+import BoolUtils
+
+library MyIdentity
+
+let one_msg = 
+  fun (msg: Message) => 
+  let nil_msg = Nil {Message} in
+  Cons {Message} msg nil_msg
+
+let zero = Uint128 0
+let not_owner_code = "NOT_THE_OWNER"
+let owner_code = "CONTRACT_OWNER"
+let user_exists_code = "USER_EXISTS"
+let true = True
+
+
+contract MyIdentity (owner: ByStr20)
+
+
+field identity: Map ByStr20 String
+  = Emp ByStr20 String
+  
+field username: Map String Bool
+  = Emp String Bool
+
+
+procedure check(code:String)
+msg = { _tag: "";_recipient: _sender;_amount: zero;code: code};
+    msgs = one_msg msg;
+    send msgs
+end
+
+(*Address of the owner of the contract*)       
+
+transition contractOwner()
+sender_is_owner = builtin eq _sender owner;
+match sender_is_owner with
+  | False =>
+
+    check not_owner_code
+
+  | True =>
+    check owner_code
+    end
+end
+
+(*transition to register the user, takes users name and wallet address*)
+
+transition register(name : String ,walletAddress:ByStr20)
+
+  walletAddress_exists <- exists identity[walletAddress];
+  name_exists <- exists username[name];
+  already_exists = orb walletAddress_exists name_exists;
+
+  match already_exists with
+  | True =>
+    check user_exists_code
+    
+  | False =>
+
+accept;
+    identity[walletAddress] := name;
+    username[name] := true;
+
+  
+
+    e = {_eventname: "register";walletAddress:walletAddress;name:name };
+    event e
+
+  end
+end
